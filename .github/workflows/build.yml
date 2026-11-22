@@ -1,0 +1,36 @@
+---
+name: Build fedora-bootc-legacy-intel-os
+
+on:
+  schedule:
+    # Build automatica giornaliera alle 04:00 UTC per mantenere aggiornati i pacchetti
+    - cron: '0 4 * * *'
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Sign OCI Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Custom Image
+        id: build
+        uses: blue-build/github-action@v1.9
+        with:
+          recipe: recipes/recipe.yml
+          cosign_private_key: ${{ secrets.SIGNING_SECRET }}
+          registry_token: ${{ github.token }}
+          pr_event_number: ${{ github.event.number }}
