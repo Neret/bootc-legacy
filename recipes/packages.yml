@@ -111,4 +111,3 @@ install:
     - podman
     - fuse-overlayfs
     - toolbox
-    - distrobox
