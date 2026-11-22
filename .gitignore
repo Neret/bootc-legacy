@@ -1,3 +1,4 @@
 secureboot/
 secureboot/*
 bluebuild
+/.bluebuild-scripts_*
