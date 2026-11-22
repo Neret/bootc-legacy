@@ -3,40 +3,41 @@ install:
   install-weak-deps: false
   packages:
     - niri
-    - xwayland-run
     - fuzzel
     - mako
     - waybar
     - kitty
     - nautilus
+    - xdg-desktop-portal
+    - xdg-desktop-portal-gtk
     - btrfs-progs
     - dosfstools
     - exfatprogs
     - ntfs-3g
-    - udftools
     - xfsprogs
     - NetworkManager
-    - NetworkManager-wifi
-    - NetworkManager-bluetooth
-    - wpa_supplicant
     - openssh-server
-    - bluez
     - firewalld
     - systemd-resolved
     - pipewire
     - pipewire-pulseaudio
     - wireplumber
-    - alsa-ucm
-    - upower
-    - power-profiles-daemon
     - grub2-pc
     - grub2-pc-modules
     - grub2-tools
-    - grub2-tools-extra
     - zram-generator-defaults
     - systemd-oomd-defaults
     - mesa-dri-drivers
-    - mesa-vulkan-drivers
-    - iwlwifi-mvm-firmware
     - flatpak
     - glibc-langpack-it
+    - git-core
+    - sudo
+    - micro
+    - eza
+    - bat
+    - zoxide
+    - fzf
+    - ripgrep
+    - bash-completion
+    - dejavu-sans-fonts
+    - dejavu-sans-mono-fonts

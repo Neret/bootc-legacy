@@ -23,8 +23,9 @@ GPT_BACKUP="/root/gpt-prima-del-grow.bak"
 BOOTC_LOG="/root/bootc-install.log"
 
 if [[ "$DISK" =~ [0-9]$ ]]; then PFX="${DISK}p"; else PFX="$DISK"; fi
-ROOT="${PFX}1"
-SCRATCH="${PFX}2"
+BIOSBOOT="${PFX}1"
+ROOT="${PFX}2"
+SCRATCH="${PFX}3"
 
 log()  { printf '\n==> %s\n' "$*"; }
 warn() { printf 'ATTENZIONE: %s\n' "$*" >&2; }
@@ -57,7 +58,7 @@ trap cleanup EXIT
 log "[1/9] Prerequisiti (Ambiente BIOS Legacy)"
 [[ -d /sys/firmware/efi/efivars ]] && die "la macchina e' avviata in UEFI, usa uno script UEFI anziche' legacy"
 dnf install -y --setopt=install_weak_deps=False \
-  podman gdisk e2fsprogs util-linux grub2-pc grub2-tools
+  podman gdisk e2fsprogs util-linux cryptsetup grub2-pc grub2-tools
 
 # ---------------- 2. CONFERMA ----------------
 log "[2/9] Conferma"
@@ -78,24 +79,26 @@ fi
 wipefs -a -f "$DISK"
 sgdisk --zap-all "$DISK"
 
-# Partizione 2: Scratch temporanea in fondo al disco
-sgdisk -n2:-"$SCRATCH_SIZE":0 -t2:8300 -c2:scratch "$DISK"
-# Partizione 1: Root che occupa tutto lo spazio rimanente all'inizio
-sgdisk -n1:2048:-$((${SCRATCH_SIZE%G} * 1024 * 1024 * 1024 / 512 + 2048)):0 -t1:8300 -c1:root "$DISK" || \
-sgdisk -n1:2048:0 -t1:8300 -c1:root "$DISK"
+# Partizione 3: scratch temporanea in fondo al disco
+sgdisk -n3:-"$SCRATCH_SIZE":0 -t3:8300 -c3:scratch "$DISK"
+# Partizione 1: BIOS boot (necessaria a GRUB su GPT)
+sgdisk -n1:2048:+1M -t1:ef02 -c1:biosboot "$DISK"
+# Partizione 2: root, tutto lo spazio rimanente
+sgdisk -n2:0:0 -t2:8300 -c2:root "$DISK"
 
 partprobe "$DISK" || true
 udevadm settle
 sleep 1
 
-# Ridefiniamo le variabili con il nuovo ordine logico (Root=1, Scratch=2)
-ROOT="${PFX}1"
-SCRATCH="${PFX}2"
+# Ridefiniamo le variabili con il nuovo ordine logico (BIOS boot=1, Root=2, Scratch=3)
+BIOSBOOT="${PFX}1"
+ROOT="${PFX}2"
+SCRATCH="${PFX}3"
 
 [[ -b "$ROOT" && -b "$SCRATCH" ]] || die "partizioni non create correttamente: $ROOT $SCRATCH"
 
-ROOT_START="$(sgdisk -i1 "$DISK" | awk '/^First sector:/ {print $3}')"
-ROOT_GUID="$(sgdisk -i1 "$DISK" | awk '/^Partition unique GUID:/ {print $4}')"
+ROOT_START="$(sgdisk -i2 "$DISK" | awk '/^First sector:/ {print $3}')"
+ROOT_GUID="$(sgdisk -i2 "$DISK" | awk '/^Partition unique GUID:/ {print $4}')"
 [[ -n "$ROOT_START" && -n "$ROOT_GUID" ]] || die "impossibile leggere inizio/GUID della root"
 
 # ---------------- 4. SCRATCH TEMPORANEA ----------------
@@ -137,7 +140,9 @@ podman pull "$IMAGE" || die "pull fallito (verifica connessione o credenziali)"
 
 # ---------------- 6. FILESYSTEM ROOT ----------------
 log "[6/9] Formattazione Root ext4 (con supporto composefs)"
-mkfs.ext4 -F -m 1 -L root "/dev/mapper/root" 2>/dev/null || mkfs.ext4 -F -m 1 -L root "$ROOT"
+mkfs.ext4 -F -m 1 -O verity -L root "$ROOT"
+ROOT_UUID="$(blkid -s UUID -o value "$ROOT")"
+[[ -n "$ROOT_UUID" ]] || die "UUID della root non leggibile"
 
 # ---------------- 7. BOOTC INSTALL (BIOS / GRUB) ----------------
 log "[7/9] Installazione bootc to-filesystem (Target: GRUB BIOS)"
@@ -153,6 +158,7 @@ podman run --rm --privileged --pid=host --security-opt label=disable \
   -e TEMP=/var/tmp \
   -e TMP=/var/tmp \
   -e CONTAINER_TMPDIR=/var/tmp \
+  -e ROOT_UUID="$ROOT_UUID" \
   -v "$MNT":/target \
   "$IMAGE" \
   bash -ec '
@@ -166,7 +172,7 @@ podman run --rm --privileged --pid=host --security-opt label=disable \
     bootc install to-filesystem \
       --composefs-backend \
       --bootloader grub \
-      --root-mount-spec="" \
+      --root-mount-spec="UUID=${ROOT_UUID}" \
       --skip-finalize \
       /target
   ' 2>&1 | tee "$BOOTC_LOG"
@@ -176,14 +182,25 @@ rc=${PIPESTATUS[0]}
 
 # ---------------- 8. INSTALLAZIONE GRUB NEL MBR ----------------
 log "[8/9] Installazione del bootloader GRUB nel MBR di $DISK"
-mount --bind /dev "$MNT/dev"
-mount --bind /sys "$MNT/sys"
-mount --bind /proc "$MNT/proc"
+grub2-install --target=i386-pc --boot-directory="$MNT/boot" "$DISK"
 
-chroot "$MNT" grub2-install --target=i386-pc "$DISK"
-chroot "$MNT" grub2-mkconfig -o /boot/grub2/grub.cfg
-
-umount "$MNT/dev" "$MNT/sys" "$MNT/proc"
+if [[ ! -s "$MNT/boot/grub2/grub.cfg" ]]; then
+  warn "grub.cfg non generato da bootc: ne scrivo uno che legge le voci BLS"
+  BLS_DIR="$(find "$MNT/boot" -maxdepth 4 -type d -path '*loader/entries' | head -n1)"
+  [[ -n "$BLS_DIR" ]] && compgen -G "$BLS_DIR/*.conf" >/dev/null || \
+    die "nessuna voce di boot (BLS) trovata in $MNT/boot: NON riavviare, controlla $BOOTC_LOG"
+  BLS_REL="${BLS_DIR#"$MNT"}"
+  mkdir -p "$MNT/boot/grub2"
+  cat >"$MNT/boot/grub2/grub.cfg" <<EOF
+set timeout=2
+insmod part_gpt
+insmod ext2
+search --no-floppy --fs-uuid --set=root ${ROOT_UUID}
+set blsdir=${BLS_REL}
+insmod blscfg
+blscfg
+EOF
+fi
 mount -o remount,ro "$MNT"
 
 # ---------------- 9. RITORNO DELLO SPAZIO SCRATCH ALLA ROOT ----------------
@@ -196,11 +213,11 @@ grow_root() {
   sgdisk --backup="$GPT_BACKUP" "$DISK" >/dev/null || return 1
 
   # Rimuoviamo la partizione scratch e ingrandiamo la root fino a fine disco
-  sgdisk -d2 -d1 \
-    -n1:"${ROOT_START}":0 \
-    -t1:8300 \
-    -c1:root \
-    -u1:"$ROOT_GUID" \
+  sgdisk -d3 -d2 \
+    -n2:"${ROOT_START}":0 \
+    -t2:8300 \
+    -c2:root \
+    -u2:"$ROOT_GUID" \
     "$DISK" >/dev/null || return 1
 
   partprobe "$DISK" || true

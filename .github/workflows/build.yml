@@ -3,8 +3,8 @@ name: Build fedora-bootc-legacy-intel-os
 
 on:
   schedule:
-    # Build automatica giornaliera alle 04:00 UTC per mantenere aggiornati i pacchetti
-    - cron: '0 4 * * *'
+    # Build automatica settimanale (domenica 04:00 UTC) per mantenere aggiornati i pacchetti
+    - cron: '0 4 * * 0'
   push:
     branches:
       - main

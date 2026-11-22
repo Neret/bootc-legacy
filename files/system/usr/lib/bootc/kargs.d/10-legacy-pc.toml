@@ -1,0 +1,1 @@
+kargs = ["vconsole.keymap=it", "zswap.enabled=0", "slab_nomerge", "vsyscall=none", "nowatchdog", "rootflags=noatime", "quiet"]
