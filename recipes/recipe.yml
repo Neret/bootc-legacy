@@ -1,7 +1,7 @@
 ---
 # yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
 name: fedora-bootc-legacy-intel-os
-description: "Fedora bootc minimale per Intel Ivy Bridge (BIOS legacy, solo cavo, iGPU) con Niri"
+description: "Fedora bootc minimale per Intel Ivy Bridge (UEFI, solo cavo, iGPU) con Niri"
 base-image: quay.io/fedora/fedora-bootc
 image-version: '45'
 

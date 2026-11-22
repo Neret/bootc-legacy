@@ -1,7 +1,0 @@
-GRUB_TIMEOUT=2
-GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
-GRUB_DEFAULT=saved
-GRUB_DISABLE_SUBMENU=true
-GRUB_TERMINAL_OUTPUT="console"
-GRUB_ENABLE_BLSCFG=true
-GRUB_DISABLE_RECOVERY="true"

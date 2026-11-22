@@ -22,15 +22,15 @@ install:
     - pipewire
     - pipewire-pulseaudio
     - wireplumber
-    - grub2-pc
-    - grub2-pc-modules
-    - grub2-tools
     - zram-generator-defaults
     - systemd-oomd-defaults
     - mesa-dri-drivers
     - flatpak
     - glibc-langpack-it
     - git-core
+    - shim-x64
+    - grub2-efi-x64
+    - efibootmgr
     - sudo
     - micro
     - eza
