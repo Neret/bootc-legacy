@@ -1,0 +1,114 @@
+# yaml-language-server: $schema=https://schema.blue-build.org/module-v1.json
+---
+type: dnf
+repos:
+  cleanup: true
+
+install:
+  install-weak-deps: false
+  packages:
+    # ---------------------------------------------------------
+    # Desktop Environment leggero: Niri (Wayland Tiling) + XWayland
+    # ---------------------------------------------------------
+    - niri
+    - xwayland-run
+    - fuzzel
+    - mako
+    - waybar
+    - kitty
+    - nautilus
+
+    # Supporto per filesystem e dispositivi rimovibili
+    - btrfs-progs
+    - dosfstools
+    - exfatprogs
+    - ntfs-3g
+    - udftools
+    - xfsprogs
+
+    # ---------------------------------------------------------
+    # Networking, SSH e Audio di base
+    # ---------------------------------------------------------
+    - NetworkManager
+    - NetworkManager-wifi
+    - NetworkManager-bluetooth
+    - wpa_supplicant
+    - openssh-clients
+    - openssh-server
+    - bluez
+    - firewalld
+    - systemd-resolved
+    - cracklib-dicts
+    - pipewire
+    - pipewire-pulseaudio
+    - wireplumber
+    - alsa-ucm
+    - upower
+    - power-profiles-daemon
+
+    # ---------------------------------------------------------
+    # Boot, sicurezza e Storage (GRUB BIOS Legacy - Senza LUKS/TPM/Impronte)
+    # ---------------------------------------------------------
+    - grub2-pc
+    - grub2-pc-modules
+    - grub2-tools
+    - grub2-tools-extra
+    - zram-generator-defaults
+    - systemd-oomd-defaults
+    - authselect
+
+    # ---------------------------------------------------------
+    # Driver Grafici Intel 3ª Gen (Ivy Bridge) & Wi-Fi
+    # ---------------------------------------------------------
+    - intel-media-driver
+    - libva-intel-driver
+    - mesa-dri-drivers
+    - mesa-vulkan-drivers
+    - iwlwifi-mvm-firmware
+
+    # ---------------------------------------------------------
+    # Flatpak e Localizzazioni
+    # ---------------------------------------------------------
+    - flatpak
+    - glibc-langpack-it
+    - glibc-langpack-en
+
+    # ---------------------------------------------------------
+    # Shell e Tool CLI essenziali
+    # ---------------------------------------------------------
+    - zsh
+    - zsh-autosuggestions
+    - zsh-syntax-highlighting
+    - shadow-utils
+    - zoxide
+    - bat
+    - eza
+    - fd-find
+    - fzf
+    - ripgrep
+    - micro
+    - git-core
+    - curl
+    - tar
+    - sudo
+    - less
+    - rsync
+    - bash-completion
+
+    # ---------------------------------------------------------
+    # Diagnostica hardware e ottimizzazione HDD (Senza NVMe)
+    # ---------------------------------------------------------
+    - pciutils
+    - usbutils
+    - dmidecode
+    - smartmontools
+    - e2fsprogs
+    - tcpdump
+
+    # ---------------------------------------------------------
+    # Container / Dev
+    # ---------------------------------------------------------
+    - podman
+    - fuse-overlayfs
+    - toolbox
+    - distrobox

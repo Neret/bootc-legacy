@@ -1,0 +1,47 @@
+---
+# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
+version: 1
+name: fedora-bootc-legacy-intel-os
+description: Immagine Fedora bootc leggera con Niri per Intel 3rd Gen su PC fisso HDD (BIOS/GRUB)
+base-image: ghcr.io/ublue-os/fedora-bootc
+image-version: 45
+
+modules:
+  - from-file: packages.yml
+
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  - type: script
+    scripts:
+      - assets.sh
+    snippets:
+      - useradd -D -s /usr/bin/zsh
+      - ln -sf /usr/lib/systemd/system/multi-user.target /etc/systemd/system/default.target
+      - 'authselect enable-feature with-fingerprint || echo "WARN - authselect non configurato"'
+
+  - type: systemd
+    system:
+      enabled:
+        - NetworkManager.service
+        - systemd-resolved.service
+        - bluetooth.service
+        - firewalld.service
+        - power-profiles-daemon.service
+        - systemd-oomd.service
+        - sshd.service
+      disabled:
+        - NetworkManager-wait-online.service
+    user:
+      enabled:
+        - podman.socket
+
+  - type: script
+    snippets:
+      - kver="$(ls -1 /usr/lib/modules | sort -V | tail -n1)" && dracut --force --reproducible --no-hostonly --omit "nfs iscsi nvmf mdraid dmraid multipath lvm" --add bootc --kver "$kver" "/usr/lib/modules/$kver/initramfs.img"
+
+  - from-file: flatpaks.yml
+
+  - type: signing
